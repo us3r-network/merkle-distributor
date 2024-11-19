@@ -1,23 +1,40 @@
 require('dotenv').config()
 require('@nomiclabs/hardhat-ethers')
+require("@nomiclabs/hardhat-etherscan")
 const { ethers } = require('hardhat')
 
 async function main() {
+  // 1. Deploy contract
+  console.log('Deploying contract...')
   const MerkleDistributor = await ethers.getContractFactory('MerkleDistributor')
-  const merkleDistributor = await MerkleDistributor.deploy(
-    // USDC
-    '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
-    '0x525df38ec587d18df62b7e004e44c6cb4c3af6981d1d3f156e73eeafb1a128a5'
-  )
+  const merkleDistributor = await MerkleDistributor.deploy()
   await merkleDistributor.deployed()
-  console.log(`merkleDistributor deployed at ${merkleDistributor.address}`)
+  console.log(`Contract deployed to: ${merkleDistributor.address}`)
+
+  // 2. Wait for block confirmations
+  console.log('Waiting for block confirmations...')
+  await merkleDistributor.deployTransaction.wait(5)
+
+  // 3. Verify contract
+  console.log('Starting contract verification...')
+  try {
+    await hre.run("verify:verify", {
+      address: merkleDistributor.address,
+      constructorArguments: [],
+    })
+    console.log('Contract verified successfully!')
+  } catch (error) {
+    if (error.message.includes('Already Verified')) {
+      console.log('Contract was already verified')
+    } else {
+      console.error('Verification failed:', error)
+    }
+  }
 }
 
 main()
-  // eslint-disable-next-line no-process-exit
   .then(() => process.exit(0))
   .catch((error) => {
     console.error(error)
-    // eslint-disable-next-line no-process-exit
     process.exit(1)
   })
